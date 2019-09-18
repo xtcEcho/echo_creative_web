@@ -86,13 +86,14 @@
 				points.push( new THREE.Vector2( Math.sin( i * 0.2 ) * 10 + 5, ( i - 5 ) * 2 ) );
 			}
 			var geometry = new THREE.LatheGeometry( points );
-			var material = new THREE.MeshPhongMaterial({ambient: 0x808080, color: Math.random() * 0xffffff});
+			var material = new THREE.MeshPhongMaterial({ambient: 0x808080, color: Math.random() * 0xffffff, side: THREE.DoubleSide});
 			var lathe = new THREE.Mesh( geometry, material );
+			lathe._shouldRotate = true;
 			scene.add( lathe );
 
 			// create the ground plane
 			var planeGeometry = new THREE.PlaneGeometry(60, 20);
-        	var planeMaterial = new THREE.MeshLambertMaterial({color: 0xffffff});
+        	var planeMaterial = new THREE.MeshLambertMaterial({color: 0xffffff, side: THREE.DoubleSide});
         	var plane = new THREE.Mesh(planeGeometry, planeMaterial);
         	plane.receiveShadow = true;
 			       
@@ -142,9 +143,11 @@
 			// animation of all objects
 			scene.traverse(function(object3d, i){
 				if( object3d instanceof THREE.Mesh === false )	return
-				// if (object3d instanceof THREE.planeGeometry === true) return
-				object3d.rotation.y = deltaTime*0.0003 * (i % 2 ? 1 : -1);
-				object3d.rotation.x = deltaTime*0.0002 * (i % 2 ? 1 : -1);
+				if (object3d._shouldRotate) {
+					// if (object3d instanceof THREE.planeGeometry === true) return
+					object3d.rotation.y = deltaTime*0.0003 * (i % 2 ? 1 : -1);
+					object3d.rotation.x = deltaTime*0.0002 * (i % 2 ? 1 : -1);
+				}
 			})
 			
 		}
