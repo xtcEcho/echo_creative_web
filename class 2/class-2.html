@@ -40,10 +40,15 @@
 				right		: 5px;
 				padding		: 5px;
 			}
+            #video {
+                position: absolute;
+                top: 100%;
+                left:100%;
+            }
 		</style>
 	</head>
 	<body>
-
+        <video crossorigin autoplay id="video"></video>
 		<div id="container"></div>
 		<div id="info">
 			Equirectangular panorama demo.<br />
@@ -109,26 +114,30 @@
                 // Load an initial equirectangular texture
                 // Textures are image data loaded into memory and associated with a material
                 // We can use textures to do anything from render realistic details, to decals and skyboxes (like this one)
-                var texture = new THREE.TextureLoader().load( 'https://live.staticflickr.com/4152/5063990424_6560387abf_b.jpg' );
+                // var texture = new THREE.TextureLoader().load( 'https://live.staticflickr.com/4152/5063990424_6560387abf_b.jpg' );
                 // var texture = new THREE.VideoTexture("videos/echofont.mov");
-                // var videoTexture = new THREEx.videoTexture("videos/echofont.mp4");
-				material = new THREE.MeshBasicMaterial( { map: texture } );
+                var videoElement = document.getElementById( 'video' );
+                videoElement.src = "videos/echofont.mp4";
+                var videoTexture = new THREE.VideoTexture(videoElement);
+
+				material = new THREE.MeshBasicMaterial( { map: videoTexture } );
 
                 // Combine the material and the geometry into a mesh
 				mesh = new THREE.Mesh( geometry, material );
 
                 // Add the mesh to the scene
-                // scene.add( mesh );
+                scene.add( mesh );
 
-                // // Add random directional light at random position
-			    // var light2	= new THREE.DirectionalLight( Math.random() * 0xffffff );
-			    // light2.position.set( Math.random(), Math.random(), Math.random() ).normalize().multiplyScalar(3);
+                // Add random directional light at random position
+			    var light2	= new THREE.DirectionalLight( Math.random() * 0xffffff );
+                light2.position.set( Math.random(), Math.random(), Math.random() ).normalize().multiplyScalar(3);
+                // light2.position.set(10, 10, 10);
 			    // light2.lookAt(cameraTarget); // Tell the camera to aim at our cameraTarget
-			    // scene.add( light2 );
+			    scene.add( light2 );
                 
                 /* Try adding more geometry to the scene here! */ 
                     // - create a geometry and material
-                    // - combine into a mesh
+                    // - combine into a meshs
 					// - add to the scene
 					
 				// var geometry = new THREE.CubeGeometry( 0.25, 0.25, 0.25 );

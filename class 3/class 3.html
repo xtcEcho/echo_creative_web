@@ -1,0 +1,351 @@
+<!doctype html>
+<html>
+	<head>
+		<title>Introduction to Three.js - Raycasting</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		
+			
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/108/three.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/three-trackballcontrols-web@0.0.2/dist/three-trackballcontrols.js"></script>
+
+		<style>
+			body {
+				overflow	: hidden;
+				padding		: 0;
+				margin		: 0;
+
+				color		: #222;
+				/* background: linear-gradient(to bottom,  #EEE 0%,#CCC 100%); */
+                background: url(assets/2560x1440-pale-pink-solid-color-background.jpg) no-repeat center center;
+                background-size: cover;
+				font-family	: monospace;
+				font-size	: 100%;
+			}
+			#info .top {
+				position	: absolute;
+				top		: 0px;
+				width		: 100%;
+				padding		: 5px;
+				text-align	: center;
+			}
+			#info a {
+				color		: #66F;
+				text-decoration	: none;
+			}
+			#info a:hover {
+				text-decoration	: underline;
+			}
+			#info .bottom {
+				position	: absolute;
+				bottom		: 0px;
+				right		: 5px;
+				padding		: 5px;
+			}
+		</style>
+	</head>
+<body>
+	<!-- three.js container -->
+			<div id="container"></div>
+			<div id="info">
+				<p class="top">Click on a cube to interact with it.</p>
+			</div>
+	<!-- info on screen display -->
+
+    <script type="text/javascript">
+        //website list
+        var wl=["Medium", "Salt & Pepper", "Google", "Reddit", "Bilibili", "SSENSE", "Lean Luxe", "Axios Space", "A Soft Murmur", "Bored Panda", "TED", "Netflix", "Mental Floss", "Tumblr"]
+		var stats, scene, renderer;
+        var camera, shouldRaycast;
+
+        var cameraTarget = new THREE.Vector3(0,0,0);
+        var raycaster = new THREE.Raycaster();
+        var mouse = new THREE.Vector2();
+        //a boolean to control camera rotation
+        var cameraRotate = true;
+        //make a copy of pointings so that the object that was pointed won't shrink immediately
+        var globalPointings = [];
+		// Trefoil knot variables
+		const numberOfMeshes = 50;
+
+        // var texture;
+        // var textureLoader = new THREE.TextureLoader();
+		// 	textureLoader.load( 'assets/2560x1440-pale-pink-solid-color-background.jpg', function ( texture ) {
+		// 		texture.mapping = THREE.UVMapping;
+		// 		// init( texture );
+		// 		// animate();
+		// 	} );
+
+		// Bootstrap the animation
+		init();
+		animate();
+
+		// init the scene
+		function init(){
+			renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			renderer.setClearColor(0xffffff, 0);
+
+
+			// Append the renderer's <canvas> element to the screen
+			document.getElementById('container').appendChild(renderer.domElement);
+
+			// Resize canvas when the screen resizes
+			document.addEventListener('resize', function() {
+				camera.aspect = width / height;
+				camera.updateProjectionMatrix();
+				renderer.setSize(width, height);
+			}, false);
+
+			// create the root scene
+			scene = new THREE.Scene();
+
+            // //background
+            // var options = {
+			// 		resolution: 1024,
+			// 		generateMipmaps: true,
+			// 		minFilter: THREE.LinearMipmapLinearFilter,
+			// 		magFilter: THREE.LinearFilter
+			// 	};
+			// scene.background = new CubemapGenerator( renderer ).fromEquirectangular( texture, options );
+
+			/* Camera */ 
+
+			// create the view camera
+			camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000 );
+            //Echo: change the camera position further away
+			camera.position.set(0, 4, 20); // Position the camera above and away from the scene
+			// camera.position.set
+            camera.lookAt(cameraTarget); // Tell the camera to aim at our cameraTarget
+			scene.add(camera);
+
+			// Hook up camera trackball controls
+			cameraControls	= new TrackballControls(camera);
+
+            //mirror camera
+            cubeCamera = new THREE.CubeCamera( 1, 1000, 256 );
+			cubeCamera.renderTarget.texture.generateMipmaps = true;
+			cubeCamera.renderTarget.texture.minFilter = THREE.LinearMipmapLinearFilter;
+			scene.add( cubeCamera );
+
+			/* Lights */
+
+			// Add lights to the scene
+			var light1	= new THREE.AmbientLight( Math.random() * 0xffffff );
+			scene.add( light1 );
+
+			// Add random directional light at random position
+			var light2	= new THREE.DirectionalLight( Math.random() * 0xffffff );
+			light2.position.set( Math.random(), Math.random(), Math.random() ).normalize().multiplyScalar(3);
+			light2.lookAt(cameraTarget); // Tell the camera to aim at our cameraTarget
+			scene.add( light2 );
+
+			// Add another random light
+			var light3	= new THREE.DirectionalLight( Math.random() * 0xffffff );
+			light3.position.set( Math.random(), Math.random(), Math.random() ).normalize().multiplyScalar(3);
+			light3.lookAt(cameraTarget); // Tell the camera to aim at our cameraTarget
+			scene.add(light3);
+
+
+			/* Geometry */ 
+			
+			var geometry, material, mesh, randomPoint;
+			var numCubes = 15;
+            var cubes = [];
+            // var geometry = new THREE.BoxBufferGeometry( 5, 5, 5 );
+            // var mesh = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } ) );
+				// mesh.position.x = Math.random() * 80 - 40;
+				// mesh.position.y = Math.random() * 80 - 40;
+        		// mesh.position.z = Math.random() * 80 - 40;
+				// mesh.rotation.x = Math.random() * 2 * Math.PI;
+				// mesh.rotation.y = Math.random() * 2 * Math.PI;
+            	// mesh.rotation.z = Math.random() * 2 * Math.PI;
+				// mesh.scale.x = Math.random() + 0.5;
+				// mesh.scale.y = Math.random() + 0.5;
+				// mesh.scale.z = Math.random() + 0.5;
+                // mesh.position.x=0;
+                // mesh.position.y=0;
+                // mesh.position.z = 0;
+                // scene.add( mesh );
+			// for ( var i = 0; i < numCubes; i ++ ) {
+			// 	var mesh = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } ) );
+			// 	mesh.position.x = Math.random() * 80 - 40;
+			// 	mesh.position.y = Math.random() * 80 - 40;
+        	// 	mesh.position.z = Math.random() * 80 - 40;
+			// 	mesh.rotation.x = Math.random() * 2 * Math.PI;
+			// 	mesh.rotation.y = Math.random() * 2 * Math.PI;
+            // 	mesh.rotation.z = Math.random() * 2 * Math.PI;
+			// 	mesh.scale.x = Math.random() + 0.5;
+			// 	mesh.scale.y = Math.random() + 0.5;
+			// 	mesh.scale.z = Math.random() + 0.5;
+			// 	scene.add( mesh );
+            //     cubes.push(mesh);
+    		// }
+			for (let i = 0; i < numCubes; i++) {
+				// Create a cube gemetry
+				geometry = new THREE.BoxGeometry( 0.7, 0.7, 0.7 );
+					
+				// Create a new material for every mesh so we can color them separately
+				material = new THREE.MeshPhongMaterial({color: Math.random() * 0xffffff});
+                // material = new THREE.MeshBasicMaterial( {
+					// envMap: cubeCamera.renderTarget.texture
+				// } );
+                material.flatShading = true;
+
+				pointX = Math.sin(2 * Math.PI * (i / numCubes)) + Math.random() * 10 - 5;
+                pointY =  + Math.random() * 10 - 5;
+				pointZ = Math.cos(2 * Math.PI * (i / numCubes)) + Math.random() * 10 - 5;
+                // pointX= Math.random()*10;
+				mesh	= new THREE.Mesh( geometry, material );
+				mesh.position.set(pointX, pointY, pointZ);
+				mesh.rotation.set(0.5, 0.5, 0.5);
+				mesh.n = Math.random();
+                // console.log(wl[wl.length - 1]);
+                mesh.webName = wl[wl.length - 1];
+                
+                wl.pop();
+
+				// Add mesh to the scene
+				scene.add(mesh);
+				cubes.push(mesh);
+			}
+		}
+
+		// animation loop
+		function animate() {
+			// Call the function again when the browser is free 
+			requestAnimationFrame( animate );
+
+			// do the render
+			render();
+		}
+
+		// render the scene
+		function render() {
+            //update cube camera
+            // cubeCamera.updateCubeMap(renderer, scene);
+            /* Raycasting */
+            //when mouse is pointing on an object, everthing should stop
+            // Perform a ray cast from the camera, in the direction of the mouse in 3d space
+            raycaster.setFromCamera(mouse,camera);
+
+            // Extract intersected objects (from a particular scene or parent Object3D)
+            var intersections = raycaster.intersectObjects(scene.children);
+            // console.log(intersections.length);
+            var pointings = []
+            //map intersected meshes to pointings array
+            pointings = intersections.map(intersection => intersection.object);
+            if (intersections.length > 0){
+                cameraRotate = false;
+                globalPointings = pointings;
+                // console.log(pointings[0].website);
+                
+            }else{
+                cameraRotate = true;
+            }
+
+			var hits = []
+			
+            if(shouldRaycast) { // check if mouse is pressed
+                // // Perform a ray cast from the camera, in the direction of the mouse in 3d space
+                // raycaster.setFromCamera(mouse, camera);
+    
+                // // Extract intersected objects (from a particular scene or parent Object3D)
+                // var intersections = raycaster.intersectObjects(scene.children);
+
+                // Log all intersections
+                console.log(intersections)
+
+                // Map intersected meshes to the hits array
+                hits = intersections.map(intersection => intersection.object)
+            }
+
+
+			// variable which is increase by Math.PI every seconds - usefull for animation
+			var time = Date.now() * Math.PI;
+
+			// actually render the scene
+			renderer.render( scene, camera );
+
+			// Rotate view camera around scene
+            //when cameraRotate is set to true
+            if (cameraRotate){
+                var x = camera.position.x;
+                var z = camera.position.z;
+
+			    camera.position.x = x * Math.cos(0.001) + z * Math.sin(0.001);
+			    camera.position.z = z * Math.cos(0.001) - x * Math.sin(0.001);
+            }
+
+			// re-Rotate the camerea to look at the cameraTarget at the center of the scene
+			camera.lookAt(cameraTarget);
+
+			// iterate over all objects in a scene
+			scene.traverse(function(object3d, i){
+				// Check if the current object is a THREE.Mesh (rather than a light, camera, etc.)
+				if( object3d instanceof THREE.Mesh === false )	return
+                if( cameraRotate === false){
+                    //  console.log(pointings.length);
+                    //  object3d.scale.set(0.1, 0.1, 0.1);
+                    if (!pointings.includes(object3d)){
+                        //  console.log(object3d);
+                        var scale = Math.max(object3d.scale.x * 0.975, 0.5);
+                        object3d.scale.set(scale, scale,scale);
+                        // object3d.scale.set(0.1, 0.1, 0.1);
+                    }else {
+                        console.log(object3d.webName);
+                        var scale = Math.min(object3d.scale.x * 1.025, 2)
+					    // called when a mesh is intersected
+                        object3d.scale.set(scale, scale, scale)
+                    }
+                } else {
+                    
+                    if (!globalPointings.includes(object3d)){
+                        var scale = Math.min(object3d.scale.x * 1.025, 1);
+                        object3d.scale.set(scale, scale,scale);
+                    }else{
+                        var scale = Math.max(object3d.scale.x * 0.975, 1)					
+					    object3d.scale.set(scale, scale ,scale)
+                    }
+                }
+                // Rotate object based on `n` coefficient
+				object3d.rotateY(0.01 * object3d.n);
+				object3d.rotateX(0.02 * object3d.n);
+                object3d.rotateZ(0.03 * object3d.n);
+                
+                /* Try animating transitions here! */ 
+
+                // Check if current mesh is hit by the raycast
+                // if(hits.includes(object3d)) {
+				// 	var scale = Math.min(object3d.scale.x * 1.025, 1.45)
+				// 	// called when a mesh is intersected
+                //     object3d.scale.set(scale, scale, scale)
+				// }
+                // else {
+				// 	// Called when a mesh is not intersected
+				// 	var scale = Math.max(object3d.scale.x * 0.975, 1)					
+				// 	object3d.scale.set(scale, scale ,scale)
+				// }
+            })
+        }
+        
+        window.addEventListener('pointermove', function (event) {
+            // calculate mouse position in normalized device coordinates
+            // (-1 to +1) for both components
+            mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+	        mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+        })
+
+        window.addEventListener('pointerdown', function (event) {
+            shouldRaycast = true;
+            
+        })
+
+        window.addEventListener('pointerup', function (event) {
+            shouldRaycast = false;
+        })
+
+
+	</script>
+</body>
+</html>
