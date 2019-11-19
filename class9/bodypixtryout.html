@@ -1,0 +1,52 @@
+<html>
+  <head>
+    <!-- Load TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.2"></script>
+    <!-- Load BodyPix -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-pix@2.0"></script>
+    <style>
+       
+    </style>
+ </head>
+
+  <body>
+    <img id='image' src='./IMG_5403.jpg' crossorigin='anonymous'/>
+    <canvas id="canvas"></canvas>
+  </body>
+  <!-- Place your code in the script tag below. You can also use an external .js file -->
+  <script>
+    const img = document.getElementById('image');
+
+    async function loadAndPredict() {
+      const net = await bodyPix.load(/** optional arguments, see below **/);
+
+      /**
+       * One of (see documentation below):
+       *   - net.segmentPerson
+       *   - net.segmentPersonParts
+       *   - net.segmentMultiPerson
+       *   - net.segmentMultiPersonParts
+       * See documentation below for details on each method.
+       */
+      const segmentation = await net.segmentPerson(img);
+      console.log(segmentation);
+      const maskBackground = true;
+        // Convert the segmentation into a mask to darken the background.
+        const foregroundColor = {r: 0, g: 0, b: 0, a: 0};
+        const backgroundColor = {r: 0, g: 0, b: 0, a: 255};
+        const backgroundDarkeningMask = bodyPix.toMask(
+            segmentation, foregroundColor, backgroundColor);
+
+        const opacity = 0.7;
+        const maskBlurAmount = 3;
+        const flipHorizontal = false;
+        const canvas = document.getElementById('canvas');
+        // Draw the mask onto the image on a canvas.  With opacity set to 0.7 and
+        // maskBlurAmount set to 3, this will darken the background and blur the
+        // darkened background's edge.
+        bodyPix.drawMask(
+            canvas, img, backgroundDarkeningMask, opacity, maskBlurAmount, flipHorizontal);
+    }
+    loadAndPredict();
+  </script>
+</html>
