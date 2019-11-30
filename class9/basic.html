@@ -3,9 +3,31 @@
 <head>
   <title>WebRTC/PeerJS Audio Call</title>
   <style>
+    body{
+      /* background-color: beige; */
+    }
     video {
       width: 300px;
       object-fit: contain;
+    }
+    
+    div#photobooth {
+      position: relative;
+      background-image: url('original.jpg');
+      background-size: contain;
+      height: 640px;
+      width: 640px;
+      /* right: 0; */
+    }
+    div#photobooth #lab0{
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    div#photobooth #lab1{
+      position:absolute;
+      top: 0;
+      left: 200px;
     }
   </style>  
   <link rel="stylesheet" href="basic.css">
@@ -31,14 +53,30 @@
 
     <div id="display"></div>
   </div>
-  <div id='lab'></div>
-
+  <div id="maskGroup">
+      <!-- <canvas id='maskdraw' style='display:none' ></canvas> -->
+  </div>
+  <div id="photobooth">
+    
+      
+          <!-- <canvas id='lab'></canvas> -->
+  </div>
   <script>
     // Create an <audio> element to play the audio stream
     // Create an <video> element to play the video stream
     let videoCount = 0;
-    function streamCanvas(v, c){
-      let canvasElt = v
+
+    // function renderImageDataToOffScreenCanvas(imageData) {
+    //   const canvas = document.getElementById('maskdraw');
+
+    //   canvas.width = imageData.width;
+    //   canvas.height = imageData.height;
+
+    //   canvas.getContext('2d').putImageData(imageData, 0, 0);
+    // }
+
+    function streamCanvas(video, c){
+      let canvasElt = video
       let canvasStream = canvasElt.captureStream(25);
 
         // Handle incoming video
@@ -50,13 +88,13 @@
         document.getElementById('lab').appendChild(canvasVideo)
         canvasVideo.srcObject = canvasStream
         canvasVideo.setAttribute('id', `canvasVideo${c}`)
-        canvasVideo.width = canvasVideo.videoWidth
-        canvasVideo.height = canvasVideo.videoHeight
+        canvasVideo.width = video.videoWidth
+        canvasVideo.height = video.videoHeight
         loadAndPredict(canvasVideo)
       } 
 
     }
-    async function loadAndPredict(v) {
+    async function loadAndPredict(v, c) {
       const net = await bodyPix.load(/** optional arguments, see below **/);
       console.log(net)
       /**
@@ -67,8 +105,65 @@
        *   - net.segmentMultiPersonParts
        * See documentation below for details on each method.
        */
-      const segmentation = await net.segmentPerson(v);
-      console.log(segmentation);
+
+      async function estimateSegmentationAndDraw() {
+        // console.log('video:', v);
+        const segmentation = await net.segmentPerson(v);
+        
+        const maskBackground = true;
+        // Convert the segmentation into a mask to darken the background.
+        const backgroundColor = {r: 0, g: 0, b: 0, a: 0};
+        const foregroundColor = {r: 255, g: 255, b: 0, a: 255};
+        const mask = bodyPix.toMask(
+            segmentation, foregroundColor, backgroundColor);
+
+        const opacity = 1;
+        const maskBlurAmount = 3;
+        const flipHorizontal = true;
+        const canvas = document.getElementById(`lab${c}`)
+        // console.log(c)
+        // Draw the mask onto the image on a canvas.  With opacity set to 0.7 and
+        // maskBlurAmount set to 3, this will darken the background and blur the
+        // darkened background's edge.
+
+        const ctx = canvas.getContext('2d');
+
+        ctx.restore();
+
+        canvas.width = v.videoWidth;
+        canvas.height = v.videoHeight;
+
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+
+        ctx.drawImage(v, 0, 0);
+
+        //ctx.drawImage(mask, 0, 0);
+
+        const offScreenCanvas = document.getElementById(`maskdraw${c}`);
+
+        offScreenCanvas.width = mask.width;
+        offScreenCanvas.height = mask.height;
+        // console.log(mask.width, mask.height)
+
+        offScreenCanvas.getContext('2d').putImageData(mask, 0, 0);
+
+        ctx.globalCompositeOperation = 'destination-in';
+        ctx.drawImage(offScreenCanvas, 0, 0);
+
+        // bodyPix.drawMask(
+        //     canvas, v, mask, opacity, maskBlurAmount, flipHorizontal);
+        requestAnimationFrame(estimateSegmentationAndDraw);
+      }
+
+      estimateSegmentationAndDraw();
+    }
+
+    //create new canvas and mask canvas for new video
+    function createCanvases(){
+      document.getElementById('maskGroup').innerHTML += `<canvas id='maskdraw${videoCount}' style='display:none' ></canvas>`
+      document.getElementById('photobooth').innerHTML += `<canvas id='lab${videoCount}'></canvas>`
+      
     }
     async function playStream(stream) {
       // Handle incoming audio
@@ -90,8 +185,18 @@
         document.getElementById('videos').appendChild(video)
         video.srcObject = stream
         video.setAttribute("class", "video");
-        video.setAttribute('id', `video${videoCount}`)
-        streamCanvas(video, videoCount)
+        video.setAttribute('id', `video${videoCount}`);
+        video.setAttribute('style', 'display:none')
+        createCanvases()
+        const count = videoCount
+
+        video.onloadedmetadata = function() {
+          // streamCanvas(video, videoCount)
+          video.width = video.videoWidth
+          video.height = video.videoHeight
+          loadAndPredict(video, count)
+          console.log(`${video.id} is detected`)
+        }
       } 
       videoCount ++
     }
