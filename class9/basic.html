@@ -207,7 +207,7 @@
       streams.push(v)
 
       if(!net) {
-        net = await bodyPix.load({multiplier: 0.50});
+        net = await bodyPix.load(/*{multiplier: 0.50}*/);
         estimateSegmentationAndDraw();
       }
     }
