@@ -1,37 +1,89 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>WebRTC/PeerJS Audio Call</title>
+  <title>Long Distance Selfie Machine</title>
   <style>
+    
     body{
-      /* background-color: beige; */
+      font-family: 'Montserrat', sans-serif;
+      margin-top:2%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+    }
+    div.container{
+      margin-left: 5%;
+      margin-right: 5%;
+      width:100%;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-around;
     }
     video {
-      width: 300px;
+      width: 100%;
       object-fit: contain;
     }
-    
-    div#photobooth {
+    #composite, #mask{
+      display: none;
+    }
+
+    div.wrapper{
+      flex: 1;
+      margin-right: 5%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+    }
+    div#photobooth{
+      flex: 2;
+      width: 100%;
       position: relative;
-      background-image: url('original.jpg');
-      background-size: contain;
-      height: 640px;
-      width: 640px;
-      /* right: 0; */
     }
-    div#photobooth #lab0{
+
+    canvas#lab {
       position: absolute;
-      top: 0;
+      z-index: 0;
+      width: 100%;
       left: 0;
+      /* left: 50%;
+      margin-left: -320px; */
+      top: 50%;
+      transform: translateY(-50%);
     }
-    div#photobooth #lab1{
+
+    div#timer-div{
       position:absolute;
-      top: 0;
-      left: 200px;
+      z-index: 10;
+      /* width: 100%; */
+      left: 50%;
+      top: 50%;
+      transform: translateX(-50%) translateY(-50%);
+      font-size: 80px;
+      font-weight: bolder;
+      color: white;
     }
+
+    div#picture-btns{
+      width: 100%;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-evenly;
+    }
+    button#timer, button#save {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      font-size: 14px;
+    }
+    video{
+      margin: 0;
+      padding: 0;
+    }
+    
   </style>  
   <link rel="stylesheet" href="basic.css">
-
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <link href="https://fonts.googleapis.com/css?family=Montserrat&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.0.4/peerjs.min.js"></script>
   <script src="./call-peer.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.2"></script>
@@ -40,33 +92,94 @@
 
 </head>
 <body>
-  <div class="wrapper">
-    <input type="text" placeholder="Peer ID" id="id">
-    <button id="call" onclick="callPeer(document.getElementById('id').value)">Call Peer</button>
-    <br/>
-    <br/>
-    
-    <input type="text" placeholder="Send message" id="message">
-    <button id="message" onclick="sendMessage(document.getElementById('message').value)">Send Message</button>
-    
-    <div id="videos"></div>
+  <div class="container">
+    <div class="wrapper">
+      <div id="call-panel">
+          <input type="text" placeholder="Peer ID" id="id">
+          <button id="call" onclick="callPeer(document.getElementById('id').value)">Call Peer</button>
+          <br/>
+          <br/>
+          <div id="display"></div>
+      </div>
 
-    <div id="display"></div>
+       <div id="videos"></div>
+
+      <div id="picture-btns">
+        <button id="timer" onClick="switchMode()">Timer off</button>
+        <button id="save" onClick="timer()" type="submit"><i class="fa fa-camera"></i></button>
+      </div>
+    </div>
+  
+    <div id="photobooth">
+        <img id='background' src='/original.jpg' style='display: none' />
+        <div id="timer-div"></div>
+        <!-- <p id="displayTimer"></p> -->
+    </div>
   </div>
-  <div id="maskGroup">
-      <!-- <canvas id='maskdraw' style='display:none' ></canvas> -->
-  </div>
-  <div id="photobooth">
-    
-      
-          <!-- <canvas id='lab'></canvas> -->
-  </div>
+  
   <script>
     // Create an <audio> element to play the audio stream
     // Create an <video> element to play the video stream
     let videoCount = 0;
     let streams = []
+    
+    function switchMode(){
+      console.log("clicked")
+      let buttonValue = document.getElementById('timer').innerHTML
+      if (buttonValue === "Timer off"){
+        document.getElementById('timer').innerHTML = "3s"
+      } else if (buttonValue === "3s"){
+        document.getElementById('timer').innerHTML = "7s"
+      }else if (buttonValue === "7s"){
+        document.getElementById('timer').innerHTML = "Timer off"
+      }
+    }
 
+    function timer(){
+      let timerValue = document.getElementById('timer').innerHTML
+      // document.getElementById('displayTimer').setAttribute('display', 'block')
+      let displayTimer = document.createElement('p')
+      document.getElementById('timer-div').appendChild(displayTimer)
+      if (timerValue === "Timer off"){
+        savePicture()
+      } else if (timerValue === "3s"){
+        countDown(3, displayTimer)
+
+      } else if (timerValue === "7s"){
+        countDown(7, displayTimer)
+      }
+    }
+
+    function savePicture(){
+      let link = document.createElement('a')
+      let canvas = document.getElementById('lab')
+      let image = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");  // here is the most important part because if you dont replace you will get a DOM 18 exception.
+      link.setAttribute('href', image)
+      link.setAttribute('download', 'selfie.png')
+      document.body.appendChild(link); 
+      link.click(); 
+      document.body.removeChild(link); 
+    }
+
+    //s is the time off second value
+    function countDown(s, d){
+      setTimeout(() => savePicture(), s*1000)
+      let start = new Date()
+      let diff, seconds
+      function startTimer(){
+        diff = s - (((Date.now() - start) / 1000) | 0);
+        seconds = (diff % 60) | 0;
+        d.textContent = seconds
+      }
+      startTimer();
+      let x = setInterval(() => {
+        startTimer()
+        if (diff <= 0){
+          clearInterval(x)
+          document.getElementById('timer-div').removeChild(d)
+        }
+      }, 1000)
+    }
 
     //create new canvas and mask canvas for new video
     document.getElementById('photobooth').innerHTML += `<canvas id='lab'></canvas>`
@@ -74,8 +187,8 @@
     document.getElementById('photobooth').innerHTML += `<canvas id='mask'></canvas>`
 
     let mainCanvas = document.getElementById('lab')
-    mainCanvas.width = 700
-    mainCanvas.height = 700
+    mainCanvas.width = 640
+    mainCanvas.height = 480
     let compositeCanvas = document.getElementById('composite')
     let maskCanvas = document.getElementById('mask')
     const mainCtx = mainCanvas.getContext('2d')
@@ -94,28 +207,39 @@
       streams.push(v)
 
       if(!net) {
-        net = await bodyPix.load(/** optional arguments, see below **/);
+        net = await bodyPix.load({multiplier: 0.50});
         estimateSegmentationAndDraw();
       }
     }
     
     
     async function estimateSegmentationAndDraw() {
+        // console.log('next frame');
         // before the loop
         // 1. clear maincanvas
         // 2. draw background to maincanvas
-        // const mainCtx = mainCanvas.getContext('2d')
-        mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
-        // mainCtx.restore()
-        // mainCtx.fillStyle = 'pink'
-        // mainCtx.clearRe(0, 0, mainCanvas.width,mainCanvas.height)
-        // mainCtx.fill()
 
-
+        const segmentations = [];
         for (let i = 0; i < streams.length; i++) {
+
+          // console.log('estimating segmentation');
           const v = streams[i];
           
           const segmentation = await net.segmentPerson(v);
+
+          segmentations.push(segmentation);
+        }
+
+        mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+        let img = document.getElementById('background')
+        mainCtx.drawImage(img, 0, 0, mainCanvas.width, mainCanvas.height)
+
+        for (let i = 0; i < streams.length; i++) {
+
+          // console.log('estimating segmentation');
+          const v = streams[i];
+          
+          const segmentation = segmentations[i];
           // const maskBackground = true;
 
           // Convert the segmentation into a mask to darken the background.
@@ -168,7 +292,11 @@
             // 1. clear the canvas
             // 2. draw background image
             // 3. draw each masekd video
+            // console.log('drew da stream');
         }
+        
+        // console.log('frame');
+        mainCtx.restore()
         
         requestAnimationFrame(estimateSegmentationAndDraw);
       }
@@ -199,6 +327,7 @@
         video.srcObject = stream
         video.setAttribute("class", "video");
         video.setAttribute('id', `video${videoCount}`);
+        video.style.transform = 'scale(-1, 1)';
         // video.setAttribute('style', 'display:none')
         
         // createCanvases()
@@ -264,17 +393,7 @@
 
     let videos = 
     console.log(document.getElementById('lab').querySelectorAll('video'))
-    // streamCanvas();
-      
-    // Call a peer
-    // callPeer(peerId: string)
-
-    // send message to all connected peers
-    // sendMessage(message: string)
-
-
-    // send message to one peer
-    // sendMessage(message: string, peerId: string)
+    
   </script>
 </body>
 </html>

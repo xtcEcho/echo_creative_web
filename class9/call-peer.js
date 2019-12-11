@@ -37,7 +37,7 @@ function initPeer(callback, dataCallback, mediaCallback, settings) {
 
 // Connect to PeerJS and get an ID
 function connectToPeerJS(id) {
-  display('Connecting to PeerJS...')
+  // display('Connecting to PeerJS...')
 
   // create new Peer.js connection
   if(id)
@@ -51,7 +51,7 @@ function connectToPeerJS(id) {
 
   // handle open connections
   me.on('open', function() {
-    display('Connected.')
+    // display('Connected.')
     display('ID: ' + me.id)
 
     peerCallback && peerCallback(me.id)
@@ -64,7 +64,7 @@ function connectToPeerJS(id) {
 
   // handle incoming data connections
   me.on('connection', function(connection) {
-    display('New data connection from ' + connection.peer +'.')
+    // display('New data connection from ' + connection.peer +'.')
     
     var peer = getPeer(connection.peer)
     peer.dataChannel = connection
@@ -123,7 +123,7 @@ function callPeer(peerId) {
       if(peerGroup && message && message.peer_group) connectToGroup(message.peer_group)
       if(peerDataCallback) peerDataCallback(message, peerId)
 
-      display('Message from ' + peerId + ': ' + message + '.')
+      // display('Message from ' + peerId + ': ' + message + '.')
     })
   })
 }
@@ -170,18 +170,18 @@ function handleIncomingCall(incoming) {
 
 // Get access to the microphone
 function getLocalStream(settings, callback) {
-  display('Trying to access your microphone. Please click "Allow".')
+  // display('Trying to access your microphone. Please click "Allow".')
   navigator.getUserMedia (
     {video: settings.video, audio: settings.audio},
 
     function success(audioStream) {
-      display('Microphone is open.')
+      // display('Microphone is open.')
       myStream = audioStream;
       if (callback) callback(null, myStream)
     },
 
     function error(err) {
-      display('Couldn\'t connect to microphone. Reload the page to try again.')
+      // display('Couldn\'t connect to microphone. Reload the page to try again.')
       if (callback) callback(err)
     }
   )
